@@ -438,14 +438,6 @@ export const calculateMetrics = (
       qMap.set(key, current);
     });
 
-    // Also include long/descriptive answers from QA data
-    qaData.forEach(q => {
-      // High threshold (30+) to ensure we only get descriptive open text, not MC answers
-      if (q.userAnswer && String(q.userAnswer).length > 30) {
-        processText(q.userAnswer);
-      }
-    });
-
     const topWords = Object.entries(wordCounts)
       .map(([text, value]) => ({ text, value }))
       .sort((a, b) => b.value - a.value)
