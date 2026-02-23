@@ -25,6 +25,26 @@ const getValue = (row: any, ...keys: string[]): any => {
   return undefined;
 };
 
+// Helper to find the header row (skipping potential metadata rows) and convert to JSON
+const getJsonWithHeaders = (sheet: any): any[] => {
+  const rawRows: any[][] = window.XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  if (rawRows.length === 0) return [];
+
+  let headerRowIndex = 0;
+  for (let i = 0; i < Math.min(rawRows.length, 15); i++) {
+    const row = rawRows[i];
+    if (row && Array.isArray(row) && row.some(cell => {
+      const val = String(cell || '').toLowerCase();
+      return val.includes('usuario') || val.includes('nombre') || val.includes('email') || val.includes('pregunta') || val.includes('respuesta') || val.includes('%');
+    })) {
+      headerRowIndex = i;
+      break;
+    }
+  }
+
+  return window.XLSX.utils.sheet_to_json(sheet, { range: headerRowIndex });
+};
+
 export const processExcelFile = async (file: File): Promise<ProcessedData> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -41,7 +61,7 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
         // --- 1. Process "Curso" Sheet ---
         const sheetNameCurso = workbook.SheetNames.find((n: string) => n.toLowerCase().trim().includes('curso')) || workbook.SheetNames[0];
         const sheetCurso = workbook.Sheets[sheetNameCurso];
-        const jsonCurso = window.XLSX.utils.sheet_to_json(sheetCurso);
+        const jsonCurso = getJsonWithHeaders(sheetCurso);
 
         const trainingRecords: TrainingRecord[] = jsonCurso.map((row: any, index: number) => {
           // Progress Parsing
@@ -117,7 +137,7 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
 
         if (sheetNameEv) {
           const sheetEv = workbook.Sheets[sheetNameEv];
-          const jsonEv = window.XLSX.utils.sheet_to_json(sheetEv);
+          const jsonEv = getJsonWithHeaders(sheetEv);
 
           evaluationRecords = jsonEv.map((row: any) => ({
             userName: getValue(row, 'Usuario', 'Nombre') || 'Anon',
@@ -141,7 +161,7 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
 
         if (sheetNameQA) {
           const sheetQA = workbook.Sheets[sheetNameQA];
-          const jsonQA = window.XLSX.utils.sheet_to_json(sheetQA);
+          const jsonQA = getJsonWithHeaders(sheetQA);
 
           questionRecords = jsonQA.map((row: any) => {
             const statusStr = String(getValue(row, 'Estado', 'Resultado') || '').toLowerCase();
@@ -169,7 +189,7 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
 
         if (sheetNameSurvey) {
           const sheetSurvey = workbook.Sheets[sheetNameSurvey];
-          const jsonSurvey = window.XLSX.utils.sheet_to_json(sheetSurvey);
+          const jsonSurvey = getJsonWithHeaders(sheetSurvey);
 
           surveyRecords = jsonSurvey.map((row: any) => ({
             email: getValue(row, 'Email', 'Correo', 'Usuario') || 'Anon',
@@ -177,7 +197,7 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
             surveyId: String(getValue(row, 'Id Survey', 'Id Encuesta') || ''),
             questionId: String(getValue(row, 'Id Pregunta') || ''),
             question: getValue(row, 'Pregunta') || 'Sin pregunta',
-            answer: getValue(row, 'Respuesta', 'Comentario', 'Texto', 'Respuesta Abierta') || ''
+            answer: getValue(row, 'Respuesta', 'Comentario', 'Texto', 'Respuesta Abierta', 'F') || ''
           }));
         }
 
@@ -187,7 +207,7 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
 
         if (sheetNameMulti) {
           const sheetMulti = workbook.Sheets[sheetNameMulti];
-          const jsonMulti = window.XLSX.utils.sheet_to_json(sheetMulti);
+          const jsonMulti = getJsonWithHeaders(sheetMulti);
 
           multipleChoiceRecords = jsonMulti.map((row: any) => ({
             email: getValue(row, 'Email', 'Correo', 'Usuario') || 'Anon',
