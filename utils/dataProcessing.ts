@@ -182,10 +182,25 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
 
         // --- 4. Process "Encuestas Abiertas" Sheet ---
         let surveyRecords: SurveyRecord[] = [];
-        const sheetNameSurvey = workbook.SheetNames.find((n: string) => {
-          const lower = n.toLowerCase();
-          return lower.includes('abiertas') || lower.includes('feedback') || lower.includes('comentarios') || (lower.includes('encuesta') && !lower.includes('multi'));
+        let sheetNameSurvey = workbook.SheetNames.find((n: string) => {
+          const lower = n.toLowerCase().trim();
+          return lower.includes('abiertas') || lower.includes('feedback') || lower.includes('comentario') || (lower.includes('encuesta') && !lower.includes('multi'));
         });
+
+        // Fallback: If no survey sheet found by name, try to find ANY sheet that has a "Respuesta" or "Comentario" column in the first few rows
+        if (!sheetNameSurvey) {
+          sheetNameSurvey = workbook.SheetNames.find(n => {
+            const sheet = workbook.Sheets[n];
+            const rows: any[][] = window.XLSX.utils.sheet_to_json(sheet, { header: 1, range: 0 });
+            const firstFewRows = rows.slice(0, 5);
+            return firstFewRows.some(row =>
+              Array.isArray(row) && row.some(cell => {
+                const val = String(cell || '').toLowerCase().trim();
+                return val === 'respuesta' || val === 'comentario' || val === 'texto';
+              })
+            );
+          });
+        }
 
         if (sheetNameSurvey) {
           const sheetSurvey = workbook.Sheets[sheetNameSurvey];
@@ -197,7 +212,8 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
             surveyId: String(getValue(row, 'Id Survey', 'Id Encuesta') || ''),
             questionId: String(getValue(row, 'Id Pregunta') || ''),
             question: getValue(row, 'Pregunta') || 'Sin pregunta',
-            answer: getValue(row, 'Respuesta', 'Comentario', 'Texto', 'Respuesta Abierta', 'F') || ''
+            // __EMPTY_5 is often the key for column F in XLSX when headers are problematic
+            answer: getValue(row, 'Respuesta', 'Comentario', 'Texto', 'Respuesta Abierta', 'F', '__EMPTY_5') || ''
           }));
         }
 
