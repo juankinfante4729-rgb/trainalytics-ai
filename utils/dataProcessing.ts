@@ -162,7 +162,10 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
 
         // --- 4. Process "Encuestas Abiertas" Sheet ---
         let surveyRecords: SurveyRecord[] = [];
-        const sheetNameSurvey = workbook.SheetNames.find((n: string) => n.toLowerCase().includes('abiertas') || (n.toLowerCase().includes('encuestas') && !n.toLowerCase().includes('multiple')));
+        const sheetNameSurvey = workbook.SheetNames.find((n: string) => {
+          const lower = n.toLowerCase();
+          return lower.includes('abiertas') || lower.includes('feedback') || lower.includes('comentarios') || (lower.includes('encuesta') && !lower.includes('multi'));
+        });
 
         if (sheetNameSurvey) {
           const sheetSurvey = workbook.Sheets[sheetNameSurvey];
@@ -411,31 +414,40 @@ export const calculateMetrics = (
     // Word Counter for Cloud
     const wordCounts: Record<string, number> = {};
 
+    const processText = (text: any) => {
+      if (!text) return;
+      const words = String(text)
+        .toLowerCase()
+        .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, " ")
+        .split(/\s+/)
+        .filter(w => w.length > 2 && !STOP_WORDS_ES.has(w));
+
+      words.forEach(word => {
+        wordCounts[word] = (wordCounts[word] || 0) + 1;
+      });
+    };
+
     surveyData.forEach(s => {
       const key = s.question;
       const current = qMap.get(key) || { course: s.courseName, answers: [] };
-      if (s.answer && s.answer.trim() !== '') {
-        current.answers.push(s.answer);
-
-        // Extract words
-        const words = s.answer
-          .toLowerCase()
-          .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "")
-          .split(/\s+/);
-
-        words.forEach(word => {
-          if (word.length > 2 && !STOP_WORDS_ES.has(word)) {
-            wordCounts[word] = (wordCounts[word] || 0) + 1;
-          }
-        });
+      if (s.answer && String(s.answer).trim() !== '') {
+        current.answers.push(String(s.answer));
+        processText(s.answer);
       }
       qMap.set(key, current);
+    });
+
+    // Also include long/descriptive answers from QA data
+    qaData.forEach(q => {
+      if (q.userAnswer && (String(q.userAnswer).length > 15 || q.status === 'Desconocido')) {
+        processText(q.userAnswer);
+      }
     });
 
     const topWords = Object.entries(wordCounts)
       .map(([text, value]) => ({ text, value }))
       .sort((a, b) => b.value - a.value)
-      .slice(0, 40); // Top 40 words
+      .slice(0, 50); // Top 50 words
 
     const groupedQuestions = Array.from(qMap.entries()).map(([question, data]) => ({ question, course: data.course, answers: data.answers })).filter(q => q.answers.length > 0);
     surveyMetrics = { totalResponses: surveyData.length, uniqueRespondents, responsesByCourse, groupedQuestions, topWords };
