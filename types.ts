@@ -61,18 +61,19 @@ export interface EvaluationMetrics {
   avgScore: number;
   passRate: number;
   globalAccuracy: { correct: number; incorrect: number };
+  passDistribution: { name: string; value: number; color: string }[];
   attemptsDistribution: { attempts: string; count: number }[];
   topPerformers: { name: string; score: number; course: string }[];
 }
 
 export interface QuestionMetrics {
   totalQuestionsAnswered: number;
-  hardestQuestions: { 
-    question: string; 
-    course: string; 
-    failureRate: number; 
-    incorrectCount: number; 
-    totalAttempts: number 
+  hardestQuestions: {
+    question: string;
+    course: string;
+    failureRate: number;
+    incorrectCount: number;
+    totalAttempts: number
   }[];
 }
 
@@ -104,16 +105,16 @@ export interface DashboardMetrics {
   completionRate: number; // Avg of % Progress
   averageTrainingHours: number; // Avg of "Horas de Reproducción"
   certificatesIssued: number; // Count of "Si"
-  
+
   // Charts Data
   completionDistribution: { name: string; value: number; color: string }[]; // Yes/No Completed
   certificateDistribution: { name: string; value: number; color: string }[]; // Yes/No Cert
-  
+
   departmentPerformance: { name: string; avgScore: number; completionRate: number }[];
   topCourses: { name: string; students: number }[];
   monthlyProgress: { month: string; completed: number }[];
   primaryCourseName: string;
-  
+
   evaluationMetrics?: EvaluationMetrics;
   questionMetrics?: QuestionMetrics;
   surveyMetrics?: SurveyMetrics;

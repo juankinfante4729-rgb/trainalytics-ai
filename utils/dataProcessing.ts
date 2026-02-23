@@ -345,22 +345,38 @@ export const calculateMetrics = (
 
   let evaluationMetrics: EvaluationMetrics | undefined;
   if (evData.length > 0) {
-    // Re-implement basic evaluation logic to ensure return type validity
-    const totalEvals = evData.length;
-    const avgAttempts = evData.reduce((sum, e) => sum + e.attempts, 0) / totalEvals;
-    const avgEvScore = evData.reduce((sum, e) => sum + e.score, 0) / totalEvals;
-    const passedEvs = evData.filter(e => e.status.toLowerCase().includes('aprobado') || e.status.toLowerCase().includes('pass') || e.score >= 70);
+    // Deduplicate by user to ensure metrics reflect unique individuals (best attempt)
+    const uniqueUsersMap = new Map<string, EvaluationRecord>();
+    evData.forEach(e => {
+      const key = (e.email || e.userName).toLowerCase().trim();
+      if (!uniqueUsersMap.has(key) || e.score > (uniqueUsersMap.get(key)?.score || 0)) {
+        uniqueUsersMap.set(key, e);
+      }
+    });
+    const dedupedEvData = Array.from(uniqueUsersMap.values());
+
+    const totalEvals = dedupedEvData.length;
+    const avgAttempts = dedupedEvData.reduce((sum, e) => sum + e.attempts, 0) / totalEvals;
+    const avgEvScore = dedupedEvData.reduce((sum, e) => sum + e.score, 0) / totalEvals;
+    const passedEvs = dedupedEvData.filter(e => e.status.toLowerCase().includes('aprobado') || e.status.toLowerCase().includes('pass') || e.score >= 70);
     const passRate = (passedEvs.length / totalEvals) * 100;
-    const totalCorrect = evData.reduce((sum, e) => sum + e.correctAnswers, 0);
-    const totalIncorrect = evData.reduce((sum, e) => sum + e.incorrectAnswers, 0);
+    const totalCorrect = dedupedEvData.reduce((sum, e) => sum + e.correctAnswers, 0);
+    const totalIncorrect = dedupedEvData.reduce((sum, e) => sum + e.incorrectAnswers, 0);
 
     const attemptMap: Record<string, number> = {};
-    evData.forEach(e => { const key = e.attempts >= 5 ? '5+' : String(e.attempts); attemptMap[key] = (attemptMap[key] || 0) + 1; });
+    dedupedEvData.forEach(e => { const key = e.attempts >= 5 ? '5+' : String(e.attempts); attemptMap[key] = (attemptMap[key] || 0) + 1; });
     const attemptsDistribution = Object.entries(attemptMap).map(([attempts, count]) => ({ attempts, count })).sort((a, b) => (a.attempts === '5+' ? 1 : b.attempts === '5+' ? -1 : Number(a.attempts) - Number(b.attempts)));
 
-    const topPerformers = evData.sort((a, b) => b.score - a.score).map(e => ({ name: e.userName, score: e.score, course: e.courseName }));
+    const approvedCount = passedEvs.length;
+    const failedCount = totalEvals - approvedCount;
+    const passDistribution = [
+      { name: 'Aprobados', value: approvedCount, color: '#10B981' },
+      { name: 'Reprobados', value: failedCount, color: '#EF4444' }
+    ].filter(d => d.value > 0);
 
-    evaluationMetrics = { totalEvaluations: totalEvals, avgAttempts, avgScore: avgEvScore, passRate, globalAccuracy: { correct: totalCorrect, incorrect: totalIncorrect }, attemptsDistribution, topPerformers };
+    const topPerformers = dedupedEvData.sort((a, b) => b.score - a.score).map(e => ({ name: e.userName, score: e.score, course: e.courseName }));
+
+    evaluationMetrics = { totalEvaluations: totalEvals, avgAttempts, avgScore: avgEvScore, passRate, globalAccuracy: { correct: totalCorrect, incorrect: totalIncorrect }, passDistribution, attemptsDistribution, topPerformers };
   }
 
   let questionMetrics: QuestionMetrics | undefined;

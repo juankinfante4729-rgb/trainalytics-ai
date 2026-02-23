@@ -514,10 +514,10 @@ const App: React.FC = () => {
                 icon={<svg className="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>}
               />
               <StatCard
-                title="Evaluaciones Rendidas"
+                title="Personal Evaluado"
                 value={metrics.evaluationMetrics.totalEvaluations}
                 colorClass="text-pink-600 bg-pink-500"
-                icon={<svg className="w-6 h-6 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2" /></svg>}
+                icon={<svg className="w-6 h-6 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>}
               />
             </div>
 
@@ -527,8 +527,8 @@ const App: React.FC = () => {
                 <AttemptsBarChart data={metrics.evaluationMetrics.attemptsDistribution} />
               </div>
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold text-gray-800 mb-2">Precisión de Respuestas</h3>
-                <AccuracyPieChart data={metrics.evaluationMetrics.globalAccuracy} />
+                <h3 className="text-lg font-bold text-gray-800 mb-2">Distribución de Resultados (Usuarios)</h3>
+                <StatusPieChart data={metrics.evaluationMetrics.passDistribution} />
               </div>
             </div>
 
