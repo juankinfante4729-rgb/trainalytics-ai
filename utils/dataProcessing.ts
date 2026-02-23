@@ -14,6 +14,17 @@ export interface ProcessedData {
   multipleChoice: MultipleChoiceRecord[];
 }
 
+// Helper to find a value in a row by testing multiple possible keys (case-insensitive & trimmed)
+const getValue = (row: any, ...keys: string[]): any => {
+  if (!row) return undefined;
+  const rowKeys = Object.keys(row);
+  for (const k of keys) {
+    const foundKey = rowKeys.find(rk => rk.toLowerCase().trim() === k.toLowerCase().trim());
+    if (foundKey !== undefined) return row[foundKey];
+  }
+  return undefined;
+};
+
 export const processExcelFile = async (file: File): Promise<ProcessedData> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -35,7 +46,7 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
         const trainingRecords: TrainingRecord[] = jsonCurso.map((row: any, index: number) => {
           // Progress Parsing
           let progressVal = 0;
-          const rawProgress = row['% de Progreso del Curso'];
+          const rawProgress = getValue(row, '% de Progreso del Curso', 'Progreso', '% Progreso');
           if (typeof rawProgress === 'number') {
             progressVal = rawProgress;
           } else if (typeof rawProgress === 'string') {
@@ -44,19 +55,16 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
 
           // Hours Parsing (Horas de Reproducción)
           let hoursVal = 0;
-          const rawHours = row['Horas de Reproducción'];
+          const rawHours = getValue(row, 'Horas de Reproducción', 'Duración Curso', 'Duración');
           if (typeof rawHours === 'number') {
             hoursVal = rawHours;
           } else if (typeof rawHours === 'string') {
             hoursVal = parseDuration(rawHours);
-          } else {
-            // Fallback if column name differs slightly, try Duración
-            hoursVal = parseDuration(row['Duración Curso']);
           }
 
           // Status & Certificate Raw
-          const completedVal = String(row['Curso completado'] || 'No').trim();
-          const certVal = String(row['Certificado obtenido'] || 'No').trim();
+          const completedVal = String(getValue(row, 'Curso completado', 'Completado') || 'No').trim();
+          const certVal = String(getValue(row, 'Certificado obtenido', 'Certificado') || 'No').trim();
 
           // Derived Status for internal logic/color coding if needed
           let status: TrainingRecord['status'] = 'No Iniciado';
@@ -65,7 +73,7 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
           } else if (progressVal > 0) {
             status = 'En Progreso';
           } else {
-            const stateVal = String(row['Estado Curso'] || '').toLowerCase();
+            const stateVal = String(getValue(row, 'Estado Curso', 'Estado') || '').toLowerCase();
             if (stateVal.includes('reprobado') || stateVal.includes('fail')) {
               status = 'Reprobado';
             } else {
@@ -73,13 +81,13 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
             }
           }
 
-          let department = row['Info extra'];
+          let department = getValue(row, 'Info extra', 'País', 'Departamento');
           if (!department || String(department).trim() === '') {
-            department = row['País'] || 'General';
+            department = 'General';
           }
 
           let score = 0;
-          const rawScore = row['Estado evaluación - Mejor intento'];
+          const rawScore = getValue(row, 'Estado evaluación - Mejor intento', 'Puntaje', 'Nota');
           if (typeof rawScore === 'number') {
             score = rawScore;
           } else if (typeof rawScore === 'string') {
@@ -88,17 +96,17 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
           }
 
           return {
-            id: String(row['ID Curso'] || `row-${index}`),
-            employeeName: row['Usuario'] || row['Email'] || 'Desconocido',
+            id: String(getValue(row, 'ID Curso', 'ID') || `row-${index}`),
+            employeeName: getValue(row, 'Usuario', 'Nombre', 'Email') || 'Desconocido',
             department: String(department),
-            courseName: row['Curso'] || 'Curso General',
+            courseName: getValue(row, 'Curso', 'Nombre del curso') || 'Curso General',
             status: status,
             courseCompletedRaw: completedVal,
             certificateObtained: certVal,
             score: score,
             progress: progressVal,
-            dateAssigned: formatDate(row['Fecha de inscripción']),
-            completionDate: formatDate(row['Fecha de Completitud']),
+            dateAssigned: formatDate(getValue(row, 'Fecha de inscripción', 'Fecha')),
+            completionDate: formatDate(getValue(row, 'Fecha de Completitud', 'F. Completitud')),
             reproductionHours: hoursVal
           };
         });
@@ -112,18 +120,18 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
           const jsonEv = window.XLSX.utils.sheet_to_json(sheetEv);
 
           evaluationRecords = jsonEv.map((row: any) => ({
-            userName: row['Usuario'] || 'Anon',
-            email: row['Email'] || '',
-            attempts: parseInt(row['Cantidad de intentos rendidos'] || '1', 10),
-            firstAttemptDate: formatDate(row['Fecha del primer intento']),
-            lastAttemptDate: formatDate(row['Fecha del último intento']),
-            correctAnswers: parseInt(row['Respuestas correctas - Mejor intento'] || '0', 10),
-            incorrectAnswers: parseInt(row['Respuestas erróneas - Mejor intento'] || '0', 10),
-            totalQuestions: parseInt(row['Total preguntas - Mejor intento'] || '0', 10),
-            score: parseFloat(String(row['Puntaje - Mejor intento'] || '0').replace('%', '')),
-            status: row['Estado evaluación - Mejor intento'] || 'Desconocido',
-            durationStr: row['Duración de resolución'] || '',
-            courseName: row['Nombre del curso'] || 'General'
+            userName: getValue(row, 'Usuario', 'Nombre') || 'Anon',
+            email: getValue(row, 'Email', 'Correo') || '',
+            attempts: parseInt(getValue(row, 'Cantidad de intentos rendidos', 'Intentos') || '1', 10),
+            firstAttemptDate: formatDate(getValue(row, 'Fecha del primer intento', 'Fecha Inicio')),
+            lastAttemptDate: formatDate(getValue(row, 'Fecha del último intento', 'Fecha Fin')),
+            correctAnswers: parseInt(getValue(row, 'Respuestas correctas - Mejor intento', 'Correctas') || '0', 10),
+            incorrectAnswers: parseInt(getValue(row, 'Respuestas erróneas - Mejor intento', 'Erróneas', 'Incorrectas') || '0', 10),
+            totalQuestions: parseInt(getValue(row, 'Total preguntas - Mejor intento', 'Total Preguntas') || '0', 10),
+            score: parseFloat(String(getValue(row, 'Puntaje - Mejor intento', 'Puntaje', 'Nota') || '0').replace('%', '')),
+            status: getValue(row, 'Estado evaluación - Mejor intento', 'Estado') || 'Desconocido',
+            durationStr: getValue(row, 'Duración de resolución', 'Duración') || '',
+            courseName: getValue(row, 'Nombre del curso', 'Curso') || 'General'
           }));
         }
 
@@ -136,18 +144,18 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
           const jsonQA = window.XLSX.utils.sheet_to_json(sheetQA);
 
           questionRecords = jsonQA.map((row: any) => {
-            const statusStr = String(row['Estado'] || '').toLowerCase();
+            const statusStr = String(getValue(row, 'Estado', 'Resultado') || '').toLowerCase();
             let status: QuestionRecord['status'] = 'Desconocido';
             if (statusStr.includes('correcta') || statusStr === 'correct') status = 'Correcta';
             if (statusStr.includes('incorrecta') || statusStr === 'incorrect') status = 'Incorrecta';
 
             return {
-              userName: row['Usuario'] || 'Anon',
-              email: row['Email'] || '',
-              question: row['Pregunta'] || 'Sin pregunta',
-              userAnswer: row['Respuesta del último intento'] || '',
+              userName: getValue(row, 'Usuario', 'Nombre') || 'Anon',
+              email: getValue(row, 'Email', 'Correo') || '',
+              question: getValue(row, 'Pregunta') || 'Sin pregunta',
+              userAnswer: getValue(row, 'Respuesta del último intento', 'Respuesta', 'Comentario') || '',
               status: status,
-              courseName: row['Nombre del curso'] || 'General'
+              courseName: getValue(row, 'Nombre del curso', 'Curso') || 'General'
             };
           });
         }
@@ -161,12 +169,12 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
           const jsonSurvey = window.XLSX.utils.sheet_to_json(sheetSurvey);
 
           surveyRecords = jsonSurvey.map((row: any) => ({
-            email: row['Email'] || 'Anon',
-            courseName: row['Curso'] || 'General',
-            surveyId: String(row['Id Survey'] || ''),
-            questionId: String(row['Id Pregunta'] || ''),
-            question: row['Pregunta'] || 'Sin pregunta',
-            answer: row['Respuesta'] || ''
+            email: getValue(row, 'Email', 'Correo', 'Usuario') || 'Anon',
+            courseName: getValue(row, 'Curso', 'Nombre del curso') || 'General',
+            surveyId: String(getValue(row, 'Id Survey', 'Id Encuesta') || ''),
+            questionId: String(getValue(row, 'Id Pregunta') || ''),
+            question: getValue(row, 'Pregunta') || 'Sin pregunta',
+            answer: getValue(row, 'Respuesta', 'Comentario', 'Texto', 'Respuesta Abierta') || ''
           }));
         }
 
@@ -179,12 +187,12 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
           const jsonMulti = window.XLSX.utils.sheet_to_json(sheetMulti);
 
           multipleChoiceRecords = jsonMulti.map((row: any) => ({
-            email: row['Email'] || 'Anon',
-            courseName: row['Curso'] || 'General',
-            surveyId: String(row['Id Survey'] || ''),
-            questionId: String(row['Id Pregunta'] || ''),
-            question: row['Pregunta'] || 'Sin pregunta',
-            choice: row['Elección'] || 'Sin elección'
+            email: getValue(row, 'Email', 'Correo', 'Usuario') || 'Anon',
+            courseName: getValue(row, 'Curso', 'Nombre del curso') || 'General',
+            surveyId: String(getValue(row, 'Id Survey', 'Id Encuesta') || ''),
+            questionId: String(getValue(row, 'Id Pregunta') || ''),
+            question: getValue(row, 'Pregunta') || 'Sin pregunta',
+            choice: getValue(row, 'Elección', 'Respuesta', 'Opción') || 'Sin elección'
           }));
         }
 
