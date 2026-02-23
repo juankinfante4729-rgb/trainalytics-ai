@@ -358,7 +358,7 @@ export const calculateMetrics = (
     evData.forEach(e => { const key = e.attempts >= 5 ? '5+' : String(e.attempts); attemptMap[key] = (attemptMap[key] || 0) + 1; });
     const attemptsDistribution = Object.entries(attemptMap).map(([attempts, count]) => ({ attempts, count })).sort((a, b) => (a.attempts === '5+' ? 1 : b.attempts === '5+' ? -1 : Number(a.attempts) - Number(b.attempts)));
 
-    const topPerformers = evData.sort((a, b) => b.score - a.score).slice(0, 5).map(e => ({ name: e.userName, score: e.score, course: e.courseName }));
+    const topPerformers = evData.sort((a, b) => b.score - a.score).map(e => ({ name: e.userName, score: e.score, course: e.courseName }));
 
     evaluationMetrics = { totalEvaluations: totalEvals, avgAttempts, avgScore: avgEvScore, passRate, globalAccuracy: { correct: totalCorrect, incorrect: totalIncorrect }, attemptsDistribution, topPerformers };
   }
