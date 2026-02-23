@@ -13,7 +13,7 @@ const COLORS = ['#10B981', '#3B82F6', '#9CA3AF', '#EF4444', '#8B5CF6', '#F59E0B'
 
 export const StatusPieChart: React.FC<{ data: DashboardMetrics['completionDistribution'] }> = ({ data }) => {
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height={250}>
       <PieChart>
         <Pie
           data={data}
@@ -23,6 +23,7 @@ export const StatusPieChart: React.FC<{ data: DashboardMetrics['completionDistri
           outerRadius={80}
           paddingAngle={5}
           dataKey="value"
+          isAnimationActive={false}
         >
           {data.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -51,7 +52,7 @@ export const DepartmentBarChart: React.FC<{ data: DashboardMetrics['departmentPe
           cursor={{ fill: '#F3F4F6' }}
           contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
         />
-        <Bar dataKey="completionRate" name="Completitud %" fill="#6366F1" radius={[0, 4, 4, 0]} barSize={20} />
+        <Bar dataKey="completionRate" name="Completitud %" fill="#6366F1" radius={[0, 4, 4, 0]} barSize={20} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -61,7 +62,7 @@ export const TrendLineChart: React.FC<{ data: DashboardMetrics['monthlyProgress'
   return (
     <ResponsiveContainer width="100%" height={250}>
       <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-        <Line type="monotone" dataKey="completed" stroke="#8B5CF6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
+        <Line type="monotone" dataKey="completed" stroke="#8B5CF6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} isAnimationActive={false} />
         <CartesianGrid stroke="#E5E7EB" strokeDasharray="5 5" vertical={false} />
         <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} dy={10} />
         <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} />
@@ -86,7 +87,7 @@ export const AttemptsBarChart: React.FC<{ data: EvaluationMetrics['attemptsDistr
         />
         <YAxis tickLine={false} tick={{ fontSize: 12 }} />
         <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '8px' }} />
-        <Bar dataKey="count" name="Evaluaciones" fill="#F59E0B" radius={[4, 4, 0, 0]} barSize={30} />
+        <Bar dataKey="count" name="Evaluaciones" fill="#F59E0B" radius={[4, 4, 0, 0]} barSize={30} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -109,6 +110,7 @@ export const AccuracyPieChart: React.FC<{ data: EvaluationMetrics['globalAccurac
           outerRadius={70}
           paddingAngle={2}
           dataKey="value"
+          isAnimationActive={false}
         >
           {chartData.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -141,7 +143,7 @@ export const HardestQuestionsChart: React.FC<{ data: QuestionMetrics['hardestQue
           contentStyle={{ borderRadius: '8px', border: '1px solid #EF4444' }}
           formatter={(value: number) => [`${value.toFixed(1)}%`, 'Tasa de Error']}
         />
-        <Bar dataKey="failureRate" name="Tasa de Error" fill="#EF4444" radius={[0, 4, 4, 0]} barSize={25} />
+        <Bar dataKey="failureRate" name="Tasa de Error" fill="#EF4444" radius={[0, 4, 4, 0]} barSize={25} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -159,7 +161,7 @@ export const SurveyVolumeChart: React.FC<{ data: SurveyMetrics['responsesByCours
         <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-15} textAnchor="end" height={60} />
         <YAxis tick={{ fontSize: 12 }} />
         <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '8px' }} />
-        <Bar dataKey="count" name="Respuestas" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
+        <Bar dataKey="count" name="Respuestas" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
   );
