@@ -533,13 +533,7 @@ const App: React.FC = () => {
             </div>
 
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-800">Top Performers (Mejores Puntajes)</h3>
-                <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
-                  <span className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Evaluados</span>
-                  <span className="text-lg font-bold text-indigo-700 leading-none">{metrics.evaluationMetrics.totalEvaluations}</span>
-                </div>
-              </div>
+              <h3 className="text-lg font-bold text-gray-800 mb-4">Top Performers (Mejores Puntajes)</h3>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm whitespace-nowrap">
                   <thead className="uppercase tracking-wider border-b-2 border-gray-200 bg-gray-50">
@@ -558,6 +552,12 @@ const App: React.FC = () => {
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot className="bg-gray-50 font-semibold border-t-2 border-gray-200">
+                    <tr>
+                      <td colSpan={2} className="px-6 py-4 text-gray-600 text-right uppercase tracking-wider text-xs">Total Personas Evaluadas</td>
+                      <td className="px-6 py-4 text-right text-lg text-indigo-700">{metrics.evaluationMetrics.totalEvaluations}</td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>
