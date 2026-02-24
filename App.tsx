@@ -533,7 +533,13 @@ const App: React.FC = () => {
             </div>
 
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-              <h3 className="text-lg font-bold text-gray-800 mb-4">Top Performers (Mejores Puntajes)</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-800">Top Performers (Mejores Puntajes)</h3>
+                <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
+                  <span className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Evaluados</span>
+                  <span className="text-lg font-bold text-indigo-700 leading-none">{metrics.evaluationMetrics.totalEvaluations}</span>
+                </div>
+              </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm whitespace-nowrap">
                   <thead className="uppercase tracking-wider border-b-2 border-gray-200 bg-gray-50">
