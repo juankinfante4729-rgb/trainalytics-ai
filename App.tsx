@@ -30,9 +30,10 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // Tab State: 'general' | 'evaluations' | 'questions' | 'surveys' | 'multiple'
-  const [activeTab, setActiveTab] = useState<'general' | 'evaluations' | 'questions' | 'surveys' | 'multiple'>('general');
+  // Tab State: 'general' | 'evaluations' | 'questions' | 'surveys' | 'multiple' | 'students'
+  const [activeTab, setActiveTab] = useState<'general' | 'evaluations' | 'questions' | 'surveys' | 'multiple' | 'students'>('general');
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [studentFilters, setStudentFilters] = useState({ name: '', course: '', status: '' });
 
   const handleFileUpload = async (file: File) => {
     setLoading(true);
@@ -47,6 +48,7 @@ const App: React.FC = () => {
         processedData.surveys,
         processedData.multipleChoice
       );
+      calculatedMetrics.isTrackReport = processedData.isTrackReport;
       setMetrics(calculatedMetrics);
 
       // Default to general tab
@@ -103,7 +105,7 @@ const App: React.FC = () => {
       if (onlyCurrentTab) {
         await captureTab(activeTab, true);
       } else {
-        const tabs: ('general' | 'evaluations' | 'questions' | 'surveys' | 'multiple')[] = ['general', 'evaluations', 'questions', 'surveys', 'multiple'];
+        const tabs: ('general' | 'students' | 'evaluations' | 'questions' | 'surveys' | 'multiple')[] = ['general', 'students', 'evaluations', 'questions', 'surveys', 'multiple'];
         const originalTab = activeTab;
 
         for (let i = 0; i < tabs.length; i++) {
@@ -111,6 +113,7 @@ const App: React.FC = () => {
           // Check if tab has data
           const hasData =
             tab === 'general' ||
+            (tab === 'students' && metrics?.isTrackReport) ||
             (tab === 'evaluations' && metrics?.evaluationMetrics) ||
             (tab === 'questions' && metrics?.questionMetrics) ||
             (tab === 'surveys' && metrics?.surveyMetrics) ||
@@ -144,9 +147,10 @@ const App: React.FC = () => {
       const pptx = new pptxgen();
       pptx.layout = 'LAYOUT_WIDE';
 
-      const tabs: ('general' | 'evaluations' | 'questions' | 'surveys' | 'multiple')[] = ['general', 'evaluations', 'questions', 'surveys', 'multiple'];
+      const tabs: ('general' | 'students' | 'evaluations' | 'questions' | 'surveys' | 'multiple')[] = ['general', 'students', 'evaluations', 'questions', 'surveys', 'multiple'];
       const tabLabels: Record<string, string> = {
-        'general': 'Resumen de Cursos',
+        'general': metrics?.isTrackReport ? 'Resumen de Rutas' : 'Resumen de Cursos',
+        'students': 'Detalle de Estudiantes',
         'evaluations': 'Resultados de Evaluaciones',
         'questions': 'Análisis de Preguntas',
         'surveys': 'Feedback Abierto',
@@ -158,6 +162,7 @@ const App: React.FC = () => {
       for (const tab of tabs) {
         const hasData =
           tab === 'general' ||
+          (tab === 'students' && metrics?.isTrackReport) ||
           (tab === 'evaluations' && metrics?.evaluationMetrics) ||
           (tab === 'questions' && metrics?.questionMetrics) ||
           (tab === 'surveys' && metrics?.surveyMetrics) ||
@@ -257,7 +262,7 @@ const App: React.FC = () => {
         <div className="mt-8 max-w-2xl text-center text-sm text-gray-400 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
           <p className="font-semibold mb-2">Estructura esperada del Excel:</p>
           <ul className="text-left space-y-1 list-disc list-inside">
-            <li>Hoja 1: <strong>Curso</strong> (Progreso %, Horas de Reproducción, Curso completado (Si/No), Certificado obtenido (Si/No)...)</li>
+            <li>Hoja 1: <strong>Curso o Tracks</strong> (Progreso %, Horas de Reproducción o Tiempo reproducido, Curso completado...)</li>
             <li>Hoja 2: <strong>Resultados Ev. final</strong> (Intentos, Puntaje...)</li>
             <li>Hoja 3: <strong>Preguntas y respuestas...</strong> (Pregunta, Respuesta, Estado...)</li>
             <li>Hoja 4: <strong>Encuestas Abiertas</strong> (Email, Curso, Pregunta, Respuesta...)</li>
@@ -386,32 +391,48 @@ const App: React.FC = () => {
               onClick={() => setActiveTab('general')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'general' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
-              Cursos
+              {metrics.isTrackReport ? 'Rutas' : 'Cursos'}
             </button>
-            <button
-              onClick={() => setActiveTab('evaluations')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'evaluations' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Evaluaciones
-            </button>
-            <button
-              onClick={() => setActiveTab('questions')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'questions' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Preguntas
-            </button>
-            <button
-              onClick={() => setActiveTab('surveys')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'surveys' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Feedback Abierto
-            </button>
-            <button
-              onClick={() => setActiveTab('multiple')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'multiple' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Encuestas Estructuradas
-            </button>
+            {metrics.isTrackReport && (
+              <button
+                onClick={() => setActiveTab('students')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'students' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Estudiantes
+              </button>
+            )}
+            {metrics.evaluationMetrics && (
+              <button
+                onClick={() => setActiveTab('evaluations')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'evaluations' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Evaluaciones
+              </button>
+            )}
+            {metrics.questionMetrics && (
+              <button
+                onClick={() => setActiveTab('questions')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'questions' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Preguntas
+              </button>
+            )}
+            {metrics.surveyMetrics && (
+              <button
+                onClick={() => setActiveTab('surveys')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'surveys' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Feedback Abierto
+              </button>
+            )}
+            {metrics.multipleChoiceMetrics && (
+              <button
+                onClick={() => setActiveTab('multiple')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'multiple' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Encuestas Estructuradas
+              </button>
+            )}
           </div>
         </div>
 
@@ -486,6 +507,99 @@ const App: React.FC = () => {
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- TAB 1.5: STUDENTS --- */}
+        {activeTab === 'students' && data?.training && metrics.isTrackReport && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-bold text-gray-800">Detalle de Estudiantes</h3>
+                <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-xs font-bold">
+                  {
+                    data.training.filter(t =>
+                      t.employeeName.toLowerCase().includes(studentFilters.name.toLowerCase()) &&
+                      t.courseName.toLowerCase().includes(studentFilters.course.toLowerCase()) &&
+                      t.status.toLowerCase().includes(studentFilters.status.toLowerCase())
+                    ).length
+                  } Registros
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm whitespace-nowrap">
+                  <thead className="uppercase tracking-wider border-b-2 border-gray-200 bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-4 font-semibold text-gray-500 align-top">
+                        <div className="mb-2">Usuario</div>
+                        <input
+                          type="text"
+                          placeholder="Filtrar por nombre..."
+                          className="w-full text-xs px-2 py-1 border border-gray-200 rounded font-normal normal-case focus:outline-none focus:border-indigo-500"
+                          value={studentFilters.name}
+                          onChange={(e) => setStudentFilters({ ...studentFilters, name: e.target.value })}
+                        />
+                      </th>
+                      <th scope="col" className="px-6 py-4 font-semibold text-gray-500 align-top">
+                        <div className="mb-2">{metrics.isTrackReport ? 'Ruta' : 'Curso'}</div>
+                        <input
+                          type="text"
+                          placeholder="Filtrar por curso..."
+                          className="w-full text-xs px-2 py-1 border border-gray-200 rounded font-normal normal-case focus:outline-none focus:border-indigo-500"
+                          value={studentFilters.course}
+                          onChange={(e) => setStudentFilters({ ...studentFilters, course: e.target.value })}
+                        />
+                      </th>
+                      <th scope="col" className="px-6 py-4 font-semibold text-gray-500 align-top text-center w-32">
+                        <div className="mb-2">Progreso</div>
+                      </th>
+                      <th scope="col" className="px-6 py-4 font-semibold text-gray-500 align-top text-center">
+                        <div className="mb-2">Estado</div>
+                        <select
+                          className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded font-normal normal-case focus:outline-none focus:border-indigo-500"
+                          value={studentFilters.status}
+                          onChange={(e) => setStudentFilters({ ...studentFilters, status: e.target.value })}
+                        >
+                          <option value="">Todos</option>
+                          <option value="completado">Completado</option>
+                          <option value="en progreso">En Progreso</option>
+                          <option value="no iniciado">No Iniciado</option>
+                        </select>
+                      </th>
+                      <th scope="col" className="px-6 py-4 font-semibold text-gray-500 align-top text-right w-24">
+                        <div className="mb-2">Horas</div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {data.training.filter(t =>
+                      t.employeeName.toLowerCase().includes(studentFilters.name.toLowerCase()) &&
+                      t.courseName.toLowerCase().includes(studentFilters.course.toLowerCase()) &&
+                      t.status.toLowerCase().includes(studentFilters.status.toLowerCase())
+                    ).map((t, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 font-medium text-gray-900">{t.employeeName}</td>
+                        <td className="px-6 py-4 text-gray-500">{t.courseName}</td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="font-semibold text-gray-700">{t.progress.toFixed(0)}%</span>
+                            <div className="w-16 bg-gray-200 rounded-full h-1.5 hidden sm:block">
+                              <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: `${Math.min(100, t.progress)}%` }}></div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${t.status === 'Completado' ? 'bg-green-100 text-green-700' : t.status === 'En Progreso' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                            {t.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right text-gray-500">{t.reproductionHours.toFixed(1)}h</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>

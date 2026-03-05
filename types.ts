@@ -119,6 +119,7 @@ export interface DashboardMetrics {
   questionMetrics?: QuestionMetrics;
   surveyMetrics?: SurveyMetrics;
   multipleChoiceMetrics?: MultipleChoiceMetrics;
+  isTrackReport?: boolean;
 }
 
 export interface AIInsight {

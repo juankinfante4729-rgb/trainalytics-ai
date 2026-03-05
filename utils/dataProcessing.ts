@@ -12,6 +12,7 @@ export interface ProcessedData {
   questions: QuestionRecord[];
   surveys: SurveyRecord[];
   multipleChoice: MultipleChoiceRecord[];
+  isTrackReport?: boolean;
 }
 
 // Helper to find a value in a row by testing multiple possible keys (case-insensitive & trimmed)
@@ -58,33 +59,60 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
         // cellDates: true ensures dates are parsed as JS Date objects correctly
         const workbook = window.XLSX.read(data, { type: 'binary', cellDates: true });
 
-        // --- 1. Process "Curso" Sheet ---
-        const sheetNameCurso = workbook.SheetNames.find((n: string) => n.toLowerCase().trim().includes('curso')) || workbook.SheetNames[0];
+        // --- 1. Process "Curso" (or "Tracks") Sheet ---
+        let isTrackReport = false;
+        let sheetNameCurso = workbook.SheetNames.find((n: string) =>
+          n.toLowerCase().trim().includes('estudiantes') && n.toLowerCase().trim().includes('track')
+        );
+        if (sheetNameCurso) {
+          isTrackReport = true;
+        } else {
+          sheetNameCurso = workbook.SheetNames.find((n: string) =>
+            n.toLowerCase().trim().includes('curso') || n.toLowerCase().trim().includes('track')
+          ) || workbook.SheetNames[0];
+        }
+
         const sheetCurso = workbook.Sheets[sheetNameCurso];
         const jsonCurso = getJsonWithHeaders(sheetCurso);
 
         const trainingRecords: TrainingRecord[] = jsonCurso.map((row: any, index: number) => {
+          // --- Attempt Standard Course Fields First ---
           // Progress Parsing
           let progressVal = 0;
-          const rawProgress = getValue(row, '% de Progreso del Curso', 'Progreso', '% Progreso');
+          const rawProgress = getValue(row, '% de Progreso del Curso', 'Progreso', '% Progreso', 'Avance de cursos', 'Avance');
           if (typeof rawProgress === 'number') {
             progressVal = rawProgress;
           } else if (typeof rawProgress === 'string') {
             progressVal = parseFloat(rawProgress.replace('%', '').trim()) || 0;
           }
 
-          // Hours Parsing (Horas de Reproducción)
+          // Hours Parsing (Horas de Reproducción) // Tracks use 'Tiempo reproducido'
           let hoursVal = 0;
-          const rawHours = getValue(row, 'Horas de Reproducción', 'Duración Curso', 'Duración');
+          const rawHours = getValue(row, 'Horas de Reproducción', 'Duración Curso', 'Duración', 'Tiempo reproducido');
           if (typeof rawHours === 'number') {
             hoursVal = rawHours;
           } else if (typeof rawHours === 'string') {
             hoursVal = parseDuration(rawHours);
           }
 
-          // Status & Certificate Raw
-          const completedVal = String(getValue(row, 'Curso completado', 'Completado') || 'No').trim();
-          const certVal = String(getValue(row, 'Certificado obtenido', 'Certificado') || 'No').trim();
+          // Status & Certificate Raw (Tracks use 'Cursos certificados' for certs and 'Fecha completitud' for completed status often, or just 100%)
+          let completedVal = String(getValue(row, 'Curso completado', 'Completado') || 'No').trim();
+          let certVal = String(getValue(row, 'Certificado obtenido', 'Certificado') || 'No').trim();
+
+          // If tracking via "Tracks" structure:
+          const completionDateRaw = getValue(row, 'Fecha de Completitud', 'F. Completitud', 'Fecha completitud');
+          if (isTrackReport) {
+            if (completionDateRaw && completedVal === 'No') {
+              completedVal = 'Si';
+            } else if (progressVal >= 100 && completedVal === 'No') {
+              completedVal = 'Si';
+            }
+
+            const certifiedCourses = getValue(row, 'Cursos certificados', 'Proyectos certificados');
+            if (certifiedCourses && parseInt(certifiedCourses, 10) > 0 && certVal === 'No') {
+              certVal = 'Si';
+            }
+          }
 
           // Derived Status for internal logic/color coding if needed
           let status: TrainingRecord['status'] = 'No Iniciado';
@@ -107,6 +135,7 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
           }
 
           let score = 0;
+          // Tracks usually don't have a total score, so default 0 is fine
           const rawScore = getValue(row, 'Estado evaluación - Mejor intento', 'Puntaje', 'Nota');
           if (typeof rawScore === 'number') {
             score = rawScore;
@@ -119,14 +148,14 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
             id: String(getValue(row, 'ID Curso', 'ID') || `row-${index}`),
             employeeName: getValue(row, 'Usuario', 'Nombre', 'Email') || 'Desconocido',
             department: String(department),
-            courseName: getValue(row, 'Curso', 'Nombre del curso') || 'Curso General',
+            courseName: getValue(row, 'Curso', 'Nombre del curso', 'Ruta', 'Nombre de la ruta') || 'Curso/Ruta General',
             status: status,
             courseCompletedRaw: completedVal,
             certificateObtained: certVal,
             score: score,
             progress: progressVal,
             dateAssigned: formatDate(getValue(row, 'Fecha de inscripción', 'Fecha')),
-            completionDate: formatDate(getValue(row, 'Fecha de Completitud', 'F. Completitud')),
+            completionDate: formatDate(completionDateRaw),
             reproductionHours: hoursVal
           };
         });
@@ -240,7 +269,8 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
           evaluations: evaluationRecords,
           questions: questionRecords,
           surveys: surveyRecords,
-          multipleChoice: multipleChoiceRecords
+          multipleChoice: multipleChoiceRecords,
+          isTrackReport
         });
       } catch (error) {
         reject(error);
@@ -385,6 +415,16 @@ export const calculateMetrics = (
   const monthlyProgress = Object.entries(monthlyData).map(([month, completed]) => ({
     month, completed
   }));
+
+  const monthOrderES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  monthlyProgress.sort((a, b) => {
+    const aIdx = monthOrderES.findIndex(m => a.month.toLowerCase().startsWith(m));
+    const bIdx = monthOrderES.findIndex(m => b.month.toLowerCase().startsWith(m));
+    // If not found (e.g. diff language), keep original order or put at end
+    if (aIdx === -1) return 1;
+    if (bIdx === -1) return -1;
+    return aIdx - bIdx;
+  });
 
   // Primary Course Name (The one with most students)
   const primaryCourseName = topCourses.length > 0 ? topCourses[0].name : "General";
