@@ -20,6 +20,12 @@ import {
   SimpleWordCloud
 } from './components/Charts';
 
+const formatDuration = (hours: number, addSpace = false): string => {
+  const sp = addSpace ? ' ' : '';
+  if (hours >= 1) return `${hours.toFixed(1)}${sp}h`;
+  return `${Math.round(hours * 60)}${sp}m`;
+};
+
 const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<{ training: TrainingRecord[], evaluations: any[], questions: any[], surveys: any[], multipleChoice: any[] } | null>(null);
@@ -456,7 +462,7 @@ const App: React.FC = () => {
               />
               <StatCard
                 title="Promedio Horas"
-                value={`${metrics.averageTrainingHours.toFixed(1)} h`}
+                value={formatDuration(metrics.averageTrainingHours, true)}
                 colorClass="text-purple-600 bg-purple-500"
                 icon={<svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
               />
@@ -495,13 +501,24 @@ const App: React.FC = () => {
                   <h3 className="text-lg font-bold text-gray-800 mb-4">Curso Evaluado</h3>
                   <div className="space-y-4">
                     {metrics.topCourses.map((course, idx) => (
-                      <div key={idx} className="relative pt-1">
-                        <div className="flex mb-2 items-center justify-between">
-                          <div className="max-w-[70%] text-xs font-medium text-gray-600 truncate">{course.name}</div>
-                          <div className="text-xs font-semibold text-indigo-600">{course.students}</div>
+                      <div key={idx} className="flex flex-col gap-1.5 pb-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 pb-1">
+                            <span className="text-sm font-medium text-gray-700 leading-normal block">
+                              {course.name}
+                            </span>
+                          </div>
+                          <div className="pt-0.5">
+                            <span className="text-sm font-bold text-indigo-600 shrink-0">
+                              {course.students}
+                            </span>
+                          </div>
                         </div>
-                        <div className="overflow-hidden h-1.5 mb-1 text-xs flex rounded bg-indigo-50">
-                          <div style={{ width: `${(course.students / metrics.totalEmployees) * 100}%` }} className="shadow-none flex flex-col bg-indigo-500"></div>
+                        <div className="w-full bg-indigo-50 rounded-full h-2 overflow-hidden">
+                          <div 
+                            style={{ width: `${(course.students / metrics.totalEmployees) * 100}%` }} 
+                            className="bg-indigo-500 h-full rounded-full transition-all duration-500"
+                          ></div>
                         </div>
                       </div>
                     ))}
@@ -595,7 +612,7 @@ const App: React.FC = () => {
                             {t.status}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right text-gray-500">{t.reproductionHours.toFixed(1)}h</td>
+                        <td className="px-6 py-4 text-right text-gray-500">{formatDuration(t.reproductionHours)}</td>
                       </tr>
                     ))}
                   </tbody>
