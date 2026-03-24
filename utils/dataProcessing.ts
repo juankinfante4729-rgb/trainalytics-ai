@@ -114,6 +114,13 @@ export const processExcelFile = async (file: File): Promise<ProcessedData> => {
             }
           }
 
+          // Sanity check between progress and completion status
+          if (progressVal > 0 && progressVal < 100) {
+            completedVal = 'No';
+          } else if (progressVal >= 100) {
+            completedVal = 'Si';
+          }
+
           // Derived Status for internal logic/color coding if needed
           let status: TrainingRecord['status'] = 'No Iniciado';
           if (['si', 'yes', 'completado', 'aprobado'].includes(completedVal.toLowerCase())) {
